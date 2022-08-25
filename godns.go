@@ -56,6 +56,10 @@ func query(recordType string, name string, server string, timeout time.Duration)
 	response.Status = dns.RcodeToString[msg.Rcode]
 
 	for _, answer := range msg.Answer {
+		// A query for www.microsoft.com returns CNAME and then As
+		if dns.TypeToString[answer.Header().Rrtype] != recordType {
+			continue
+		}
 		fields := strings.Fields(answer.String())
 		response.Records = append(response.Records, ResourceRecord{
 			Type:   dns.TypeToString[answer.Header().Rrtype],
