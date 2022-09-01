@@ -1,10 +1,13 @@
 package godns
 
 import (
+	"io/ioutil"
+	"net"
 	"strings"
 	"time"
 
 	"github.com/miekg/dns"
+	"github.com/moby/libnetwork/resolvconf"
 )
 
 type Response struct {
@@ -73,6 +76,20 @@ func query(recordType string, name string, server string, timeout time.Duration)
 }
 
 func Check(recordType string, name string, timeout time.Duration, servers []string) *Response {
+	if len(servers) == 0 {
+		resolvContents, err := ioutil.ReadFile("/etc/resolv.conf")
+		if err != nil {
+			panic(err)
+		}
+
+		f := resolvconf.File{
+			Content: resolvContents,
+		}
+
+		for _, nameserver := range resolvconf.GetNameservers(f.Content) {
+			servers = append(servers, net.JoinHostPort(nameserver, "53"))
+		}
+	}
 	start := time.Now()
 
 	responses := make(chan *Response)
@@ -81,6 +98,7 @@ func Check(recordType string, name string, timeout time.Duration, servers []stri
 			for i := 0; i < 3; i++ {
 				remaining := timeout - time.Since(start)
 				response := query(recordType, name, server, remaining)
+
 				if response.Error != nil {
 					continue
 				}

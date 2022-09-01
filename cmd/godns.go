@@ -22,7 +22,7 @@ func main() {
 
 	response := godns.Check(recordType, name, timeout, servers)
 	if response == nil {
-		log.Println("no response")
+		log.Println("no response from", servers)
 		return
 	}
 
